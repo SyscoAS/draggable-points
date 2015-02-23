@@ -41,7 +41,13 @@
                     originalEvent = e.originalEvent || e;
 
                 if (hoverPoint) {
-                    options = hoverPoint.series.options;
+                    if (hoverPoint.options.draggableX != undefined && hoverPoint.options.draggableY != undefined){
+                        options = hoverPoint.options
+                    }
+                    else {
+                        options = hoverPoint.series.options;
+                    }
+
                     if (options.draggableX) {
                         dragPoint = hoverPoint;
                         dragX = originalEvent.changedTouches ? originalEvent.changedTouches[0].pageX : e.pageX;
@@ -59,21 +65,32 @@
                     if (dragPoint) {
                         chart.mouseIsDown = false;
                     }
+                    
+
+                    
                 }
             }
 
             function mouseMove(e) {
-                
                 e.preventDefault();
 
                 if (dragPoint) {
+                    if (dragPoint.options.draggableX != undefined && dragPoint.options.draggableY != undefined){
+                        draggableX = dragPoint.options.draggableX;
+                        draggableY = dragPoint.options.draggableY;
+                    }
+                    else {
+                        draggableX = dragPoint.series.options.draggableX;
+                        draggableY = dragPoint.series.options.draggableY;
+                    } 
+
                     var originalEvent = e.originalEvent || e,
                         pageX = originalEvent.changedTouches ? originalEvent.changedTouches[0].pageX : e.pageX,
                         pageY = originalEvent.changedTouches ? originalEvent.changedTouches[0].pageY : e.pageY,
                         deltaY = dragY - pageY,
                         deltaX = dragX - pageX,
-                        draggableX = dragPoint.series.options.draggableX,
-                        draggableY = dragPoint.series.options.draggableY,
+                        draggableX = draggableX,
+                        draggableY = draggableY,
                         series = dragPoint.series,
                         isScatter = series.type === 'bubble' || series.type === 'scatter',
                         newPlotX = isScatter ? dragPlotX - deltaX : dragPlotX - deltaX - dragPoint.series.xAxis.minPixelPadding,
@@ -86,50 +103,92 @@
                     newX = filterRange(newX, series, 'X');
                     newY = filterRange(newY, series, 'Y');
 
-                    // Fire the 'drag' event with a default action to move the point.
-                    dragPoint.firePointEvent(
-                        'drag', {
-                            newX: draggableX ? newX : dragPoint.x,
-                            newY: draggableY ? newY : dragPoint.y
-                        }, function () {
-                            proceed = true;
+                    //Check if dragPoint isallowed to be dragged pass its neighbors
+                    var pointsCanSwitchPlaces = true;
+                    if (dragPoint.series.options.pointsCanSwitchPlaces != undefined && !dragPoint.series.options.pointsCanSwitchPlaces){
+                        points = dragPoint.series.points
+                        var index = points.indexOf(dragPoint)
 
-                            dragPoint.update({
-                                x: draggableX ? newX : dragPoint.x,
-                                y: draggableY ? newY : dragPoint.y
-                            }, false);
-
-                            // Hide halo while dragging (#14)
-                            if (series.halo) {
-                                series.halo = series.halo.destroy();
-                            }
-
-                            if (chart.tooltip) {
-                                chart.tooltip.refresh(chart.tooltip.shared ? [dragPoint] : dragPoint);
-                            }
-                            if (series.stackKey) {
-                                chart.redraw();
-                            } else {
-                                series.redraw();
+                        //Getting the closest left neighbor and checks if the dragPoint is dragged passed the left neighbor
+                        if (index != 0) {
+                            var pointBeforeDragPoint = points[index - 1]
+                        }
+                        if (pointBeforeDragPoint){
+                            if (newX < pointBeforeDragPoint.x){
+                                pointsCanSwitchPlaces = false;
                             }
                         }
-                    );
 
-                    // The default handler has not run because of prevented default
-                    if (!proceed) {
-                        drop();
+                        //Getting the closest right neighbor and checks if the dragPoint is dragged passed the right neighbor
+                        if (index != points.length){
+                            var pointAfterDragPoint = points[index + 1]
+                        }                        
+                        if (pointAfterDragPoint){
+                            if (newX > pointAfterDragPoint.x){
+                                pointsCanSwitchPlaces = false;
+                            }
+                        }
                     }
+                    
+
+                    // Fire the 'drag' event with a default action to move the point.
+                    if(pointsCanSwitchPlaces){
+                        dragPoint.firePointEvent(
+                            'drag', {
+                                newX: draggableX ? newX : dragPoint.x,
+                                newY: draggableY ? newY : dragPoint.y
+                            }, function () {
+                                proceed = true;
+
+                                dragPoint.update({
+                                    x: draggableX ? newX : dragPoint.x,
+                                    y: draggableY ? newY : dragPoint.y
+                                }, false);
+
+                                // Hide halo while dragging (#14)
+                                if (series.halo) {
+                                    series.halo = series.halo.destroy();
+                                }
+
+                                if (chart.tooltip) {
+                                    chart.tooltip.refresh(chart.tooltip.shared ? [dragPoint] : dragPoint);
+                                }
+                                if (series.stackKey) {
+                                    chart.redraw();
+                                } else {
+                                    series.redraw();
+                                }
+                            }
+                        );
+                        // The default handler has not run because of prevented default
+                        if (!proceed) {
+                            drop();
+                        }
+                    }
+                    
+
+                    
                 }
             }
 
             function drop(e) {
+
                 if (dragPoint) {
+                    if (dragPoint.options.draggableX != undefined && dragPoint.options.draggableY != undefined){
+                        draggableX = dragPoint.options.draggableX;
+                        draggableY = dragPoint.options.draggableY;
+                    }
+                    else {
+                        draggableX = dragPoint.series.options.draggableX;
+                        draggableY = dragPoint.series.options.draggableY;
+                    } 
+
                     if (e) {
                         var originalEvent = e.originalEvent || e,
                             pageX = originalEvent.changedTouches ? originalEvent.changedTouches[0].pageX : e.pageX,
                             pageY = originalEvent.changedTouches ? originalEvent.changedTouches[0].pageY : e.pageY,
-                            draggableX = dragPoint.series.options.draggableX,
-                            draggableY = dragPoint.series.options.draggableY,
+                            draggableX = draggableX,
+                            draggableY = draggableY,
                             deltaX = dragX - pageX,
                             deltaY = dragY - pageY,
                             series = dragPoint.series,
