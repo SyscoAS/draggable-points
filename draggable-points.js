@@ -103,8 +103,7 @@
                     newX = filterRange(newX, series, 'X');
                     newY = filterRange(newY, series, 'Y');
 
-                    //Check if dragPoint isallowed to be dragged pass its neighbors
-                    var pointsCanSwitchPlaces = true;
+                    //Check if dragPoint is allowed to be dragged pass its neighbors
                     if (dragPoint.series.options.pointsCanSwitchPlaces != undefined && !dragPoint.series.options.pointsCanSwitchPlaces){
                         points = dragPoint.series.points
                         var index = points.indexOf(dragPoint)
@@ -112,61 +111,57 @@
                         //Getting the closest left neighbor and checks if the dragPoint is dragged passed the left neighbor
                         if (index != 0) {
                             var pointBeforeDragPoint = points[index - 1]
-                        }
-                        if (pointBeforeDragPoint){
-                            if (newX < pointBeforeDragPoint.x){
-                                pointsCanSwitchPlaces = false;
+                            if (pointBeforeDragPoint){
+                                if (newX <= pointBeforeDragPoint.x){
+                                    newX = pointBeforeDragPoint.x
+                                }
                             }
                         }
 
                         //Getting the closest right neighbor and checks if the dragPoint is dragged passed the right neighbor
                         if (index != points.length){
                             var pointAfterDragPoint = points[index + 1]
-                        }                        
-                        if (pointAfterDragPoint){
-                            if (newX > pointAfterDragPoint.x){
-                                pointsCanSwitchPlaces = false;
+                            if (pointAfterDragPoint){
+                                if (newX >= pointAfterDragPoint.x){
+                                    newX = pointAfterDragPoint.x
+                                }
                             }
-                        }
+                        }                        
                     }
                     
 
                     // Fire the 'drag' event with a default action to move the point.
-                    if(pointsCanSwitchPlaces){
-                        dragPoint.firePointEvent(
-                            'drag', {
-                                newX: draggableX ? newX : dragPoint.x,
-                                newY: draggableY ? newY : dragPoint.y
-                            }, function () {
-                                proceed = true;
+                    dragPoint.firePointEvent(
+                        'drag', {
+                            newX: draggableX ? newX : dragPoint.x,
+                            newY: draggableY ? newY : dragPoint.y
+                        }, function () {
+                            proceed = true;
 
-                                dragPoint.update({
-                                    x: draggableX ? newX : dragPoint.x,
-                                    y: draggableY ? newY : dragPoint.y
-                                }, false);
+                            dragPoint.update({
+                                x: draggableX ? newX : dragPoint.x,
+                                y: draggableY ? newY : dragPoint.y
+                            }, false);
 
-                                // Hide halo while dragging (#14)
-                                if (series.halo) {
-                                    series.halo = series.halo.destroy();
-                                }
-
-                                if (chart.tooltip) {
-                                    chart.tooltip.refresh(chart.tooltip.shared ? [dragPoint] : dragPoint);
-                                }
-                                if (series.stackKey) {
-                                    chart.redraw();
-                                } else {
-                                    series.redraw();
-                                }
+                            // Hide halo while dragging (#14)
+                            if (series.halo) {
+                                series.halo = series.halo.destroy();
                             }
-                        );
-                        // The default handler has not run because of prevented default
-                        if (!proceed) {
-                            drop();
-                        }
-                    }
-                    
 
+                            if (chart.tooltip) {
+                                chart.tooltip.refresh(chart.tooltip.shared ? [dragPoint] : dragPoint);
+                            }
+                            if (series.stackKey) {
+                                chart.redraw();
+                            } else {
+                                series.redraw();
+                            }
+                        }
+                    );
+                    // The default handler has not run because of prevented default
+                    if (!proceed) {
+                        drop();
+                    }
                     
                 }
             }
@@ -200,6 +195,26 @@
 
                         newX = filterRange(newX, series, 'X');
                         newY = filterRange(newY, series, 'Y');
+
+                        // Set newX to same value as pointBeforeDragPoint/pointAfterDragPoint to remove any potential glitches
+                        if (!dragPoint.series.options.pointsCanSwitchPlaces) {
+                            var index = points.indexOf(dragPoint)
+                            if (index != points.length){
+                                var pointBeforeDragPoint = points[index - 1]
+                                if (pointBeforeDragPoint && newX <= pointBeforeDragPoint.x) {
+                                    //Adding a small constant so it's easier to move the point afterwards
+                                    newX = pointBeforeDragPoint.x + 0.01
+                                }
+                            }
+
+                            if (index != points.length){
+                                var pointAfterDragPoint = points[index + 1]
+                                if (pointAfterDragPoint && newX >= pointAfterDragPoint.x) {
+                                    //Subtracting a small constant so it's easier to move the point afterwards
+                                    newX = pointAfterDragPoint.x - 0.01
+                                }
+                            }                        
+                        }
 
                         dragPoint.update({
                             x: draggableX ? newX : dragPoint.x,
